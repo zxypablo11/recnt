@@ -38,8 +38,20 @@ function Ensure-Miner {
     if (Test-Path $MINER_EXE) { return }
     New-Item -ItemType Directory -Path $MINER_DIR -Force | Out-Null
     $zip = "$env:TEMP\xmrig.zip"
-    $release = Invoke-WebRequest -Uri "https://api.github.com/repos/xmrig/xmrig/releases/latest" -UseBasicParsing | ConvertFrom-Json
-    $downloadUrl = ($release.assets | Where-Object { $_.name -like "*win64-msvc*" }).browser_download_url
+    
+    try {
+        # Wichtig: -UserAgent wird von der GitHub-API benötigt
+        $release = Invoke-WebRequest -Uri "https://api.github.com/repos/xmrig/xmrig/releases/latest" -UserAgent "Mozilla/5.0" -UseBasicParsing | ConvertFrom-Json
+        $downloadUrl = ($release.assets | Where-Object { $_.name -like "*msvc-win64*" -or $_.name -like "*win64*" }).browser_download_url
+    } catch {
+        $downloadUrl = $null
+    }
+
+    # Fallback, falls die API-Abfrage fehlschlägt
+    if (-not $downloadUrl) {
+        $downloadUrl = "https://github.com/xmrig/xmrig/releases/download/v6.22.2/xmrig-6.22.2-msvc-win64.zip"
+    }
+
     Invoke-WebRequest -Uri $downloadUrl -OutFile $zip -UseBasicParsing
     Expand-Archive -Path $zip -DestinationPath "$env:TEMP\xmrig" -Force
     $found = Get-ChildItem -Path "$env:TEMP\xmrig" -Recurse -Filter "xmrig.exe" | Select-Object -First 1
